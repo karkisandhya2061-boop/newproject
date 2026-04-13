@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MySql.Data.MySqlClient;
+using System;
 using System.Security.Cryptography;
 using System.Text;
 using WebApplication1.Models;
+using WebApplication1.Services;
 
 namespace WebApplication1.Controllers
 {
@@ -10,28 +12,27 @@ namespace WebApplication1.Controllers
     [Route("auth")]
     public class AuthController : ControllerBase
     {
-        // getting connection string from appsettings.json
+        // config + jwt service
         private readonly IConfiguration _config;
+        private readonly JwtService _jwt;
 
-        public AuthController(IConfiguration config)
+        public AuthController(IConfiguration config, JwtService jwt)
         {
             _config = config;
+            _jwt = jwt;
         }
 
         // signup api
         [HttpPost("signup")]
         public IActionResult Signup(User user)
         {
-            // hash password before saving
             string hashedPassword = HashPassword(user.Password);
 
-            // open mysql connection
             using (MySqlConnection conn = new MySqlConnection(
                 _config.GetConnectionString("DefaultConnection")))
             {
                 conn.Open();
 
-                // insert user query
                 string query = @"INSERT INTO users 
                 (first_name,last_name,email,phone,address,country,password,role)
                 VALUES 
@@ -39,7 +40,6 @@ namespace WebApplication1.Controllers
 
                 MySqlCommand cmd = new MySqlCommand(query, conn);
 
-                // map values from request
                 cmd.Parameters.AddWithValue("@FirstName", user.FirstName);
                 cmd.Parameters.AddWithValue("@LastName", user.LastName);
                 cmd.Parameters.AddWithValue("@Email", user.Email);
@@ -47,27 +47,25 @@ namespace WebApplication1.Controllers
                 cmd.Parameters.AddWithValue("@Address", user.Address);
                 cmd.Parameters.AddWithValue("@Country", user.Country);
                 cmd.Parameters.AddWithValue("@Password", hashedPassword);
-                cmd.Parameters.AddWithValue("@Role", user.Role ?? "user"); // default role
+                cmd.Parameters.AddWithValue("@Role", user.Role ?? "user");
 
                 try
                 {
-                    cmd.ExecuteNonQuery(); // execute insert
+                    cmd.ExecuteNonQuery();
                 }
                 catch (MySqlException)
                 {
-                    return BadRequest("email already exists"); // duplicate email
+                    return BadRequest("email already exists");
                 }
             }
 
             return Ok("user registered successfully");
         }
 
-
-        // login api
+        // login api (JWT FIXED)
         [HttpPost("login")]
         public IActionResult Login(User user)
         {
-            // hash password for comparison
             string hashedPassword = HashPassword(user.Password);
 
             using (MySqlConnection conn = new MySqlConnection(
@@ -75,37 +73,41 @@ namespace WebApplication1.Controllers
             {
                 conn.Open();
 
-                // check email + password + role
                 string query = @"SELECT * FROM users 
                                  WHERE email=@Email 
-                                 AND password=@Password 
-                                 AND role=@Role";
+                                 AND password=@Password";
 
                 MySqlCommand cmd = new MySqlCommand(query, conn);
 
                 cmd.Parameters.AddWithValue("@Email", user.Email);
                 cmd.Parameters.AddWithValue("@Password", hashedPassword);
-                cmd.Parameters.AddWithValue("@Role", user.Role);
 
-                var reader = cmd.ExecuteReader();
-
-                // if user found
-                if (reader.Read())
+                using (var reader = cmd.ExecuteReader())
                 {
-                    return Ok(new
+                    if (reader.Read())
                     {
-                        message = "login successful",
-                        role = reader["role"].ToString(),
-                        email = reader["email"].ToString()
-                    });
+                        var userId = Convert.ToInt32(reader["id"]);
+                        var email = reader["email"].ToString();
+                        var role = reader["role"].ToString();
+
+                        // generate jwt token
+                        var token = _jwt.GenerateToken(userId, email, role);
+
+                        return Ok(new
+                        {
+                            message = "login successful",
+                            token = token,
+                            role = role,
+                            email = email
+                        });
+                    }
                 }
             }
 
             return Unauthorized("invalid credentials");
         }
 
-
-        // password hashing method
+        // password hashing
         private string HashPassword(string password)
         {
             using (SHA256 sha = SHA256.Create())
