@@ -1,6 +1,7 @@
-﻿using Microsoft.IdentityModel.Tokens;
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace WebApplication1.Services
@@ -18,7 +19,7 @@ namespace WebApplication1.Services
         {
             var jwtSettings = _config.GetSection("Jwt");
             var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtSettings["Key"])
+                Encoding.UTF8.GetBytes(jwtSettings["Key"]!)
             );
 
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -34,11 +35,19 @@ namespace WebApplication1.Services
                 issuer: jwtSettings["Issuer"],
                 audience: jwtSettings["Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(Convert.ToDouble(jwtSettings["DurationInMinutes"])),
+                expires: DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["DurationInMinutes"])),
                 signingCredentials: creds
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public string GenerateRefreshToken()
+        {
+            var bytes = new byte[64];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(bytes);
+            return Convert.ToBase64String(bytes);
         }
     }
 }

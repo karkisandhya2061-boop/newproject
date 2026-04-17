@@ -1,6 +1,22 @@
 [
   {
     "ContainingType": "WebApplication1.Controllers.AuthController",
+    "Method": "AdminLogin",
+    "RelativePath": "auth/admin-login",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "req",
+        "Type": "WebApplication1.Controllers.AdminLoginRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WebApplication1.Controllers.AuthController",
     "Method": "Login",
     "RelativePath": "auth/login",
     "HttpMethod": "POST",
@@ -8,8 +24,50 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "user",
-        "Type": "WebApplication1.Models.User",
+        "Name": "req",
+        "Type": "WebApplication1.Controllers.LoginRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WebApplication1.Controllers.AuthController",
+    "Method": "Logout",
+    "RelativePath": "auth/logout",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "req",
+        "Type": "WebApplication1.Controllers.RefreshRequest",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WebApplication1.Controllers.AuthController",
+    "Method": "Me",
+    "RelativePath": "auth/me",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "WebApplication1.Controllers.AuthController",
+    "Method": "Refresh",
+    "RelativePath": "auth/refresh",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "req",
+        "Type": "WebApplication1.Controllers.RefreshRequest",
         "IsRequired": true
       }
     ],
